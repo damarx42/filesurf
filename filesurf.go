@@ -13,7 +13,7 @@ import (
     "encoding/pem"
     "math/big"
     "path/filepath"
-    "io/ioutil"
+//    "io/ioutil"
     "time"
     "os"
 )
@@ -79,10 +79,10 @@ func main() {
     log.Printf("Use endpoint /upload for uploading. POST request with form field 'content' = your data")
 
     if *enableHTTPS {
-        log.Printf("HTTPS enabled on https://localhost%s/", address)
+        log.Printf("HTTPS enabled on https://0.0.0.0%s/", address)
         err = http.ListenAndServeTLS(address, *certFile, *keyFile, nil)
     } else {
-        log.Printf("HTTP enabled on http://localhost%s/", address)
+        log.Printf("HTTP enabled on http://0.0.0.0%s/", address)
         err = http.ListenAndServe(address, nil)
     }
 
@@ -148,7 +148,7 @@ func pemBlockForKey(priv *ecdsa.PrivateKey) *pem.Block {
 }
 
 func fileUploadHandler (w http.ResponseWriter, r *http.Request) {
-    // max file size, set to 10GB for now. Might parameterize this later.
+    // max file size, set to 5GB for now. Might parameterize this later.
     r.ParseMultipartForm(5000 << 20)
 
     // Retrieve the file from form data
@@ -176,18 +176,7 @@ func fileUploadHandler (w http.ResponseWriter, r *http.Request) {
         http.Error(w, "Error saving the file", http.StatusInternalServerError)
     }    
 
-    // Read the file into a byte slice to validate its type
-    fileBytes, err := ioutil.ReadAll(file)
-    if err != nil {
-        http.Error(w, "Invalid file", http.StatusBadRequest)
-        return
-    }
-
-    if _, err := dst.Write(fileBytes); err != nil {
-        http.Error(w, "Error saving the file", http.StatusInternalServerError)
-    }
-    
-    log.Printf("Received file: %s", handler.Filename)
+    log.Printf("Received file: %s, Size: %d", handler.Filename, handler.Size)
 }
 
 
