@@ -13,13 +13,15 @@ import (
     "encoding/pem"
     "math/big"
     "path/filepath"
-//    "io/ioutil"
     "time"
     "os"
 )
 
+
 const DEFAULTCERTNAME string = "filesurf.pem"
 const DEFAULTKEYNAME string = "filesurf.key"
+const BUFFER_SIZE int64 = 20 << 20 // 20 MB buffer size for file upload
+
 
 func main() {
     // Command-line flags
@@ -70,8 +72,7 @@ func main() {
     // File server with directory listing and upload endpoint
     fileServer := http.FileServer(http.Dir(*baseDir))
     http.Handle("/", fileServer)
-    http.HandleFunc("/upload", fileUploadHandler)
-    log.Printf("Maximum file upload size: 5GB")
+    http.HandleFunc("/upload", fileUploadHandler )
 
     address := ":" + *port
 
@@ -139,6 +140,7 @@ func generateKeyAndCert() {
     keyOut.Close()
 }
 
+
 func pemBlockForKey(priv *ecdsa.PrivateKey) *pem.Block {
     b, err := x509.MarshalECPrivateKey(priv)
     if err != nil {
@@ -147,9 +149,9 @@ func pemBlockForKey(priv *ecdsa.PrivateKey) *pem.Block {
     return &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}
 }
 
+
 func fileUploadHandler (w http.ResponseWriter, r *http.Request) {
-    // max file size, set to 5GB for now. Might parameterize this later.
-    r.ParseMultipartForm(5000 << 20)
+    r.ParseMultipartForm( BUFFER_SIZE )
 
     // Retrieve the file from form data
     file, handler, err := r.FormFile("content")
@@ -159,8 +161,10 @@ func fileUploadHandler (w http.ResponseWriter, r *http.Request) {
     }
     defer file.Close()
 
+    var sstr = prettyPrintSize(handler.Size)
+
     fmt.Fprintf(w, "Uploaded File: %s\n", handler.Filename)
-    fmt.Fprintf(w, "File Size: %d\n", handler.Size)
+    fmt.Fprintf(w, "File Size: %s\n", sstr)
     fmt.Fprintf(w, "MIME Header: %v\n", handler.Header)
 
     // Now let’s save it locally
@@ -176,7 +180,7 @@ func fileUploadHandler (w http.ResponseWriter, r *http.Request) {
         http.Error(w, "Error saving the file", http.StatusInternalServerError)
     }    
 
-    log.Printf("Received file: %s, Size: %d", handler.Filename, handler.Size)
+    log.Printf("Received file: %s, Size: %s", handler.Filename, sstr)
 }
 
 
@@ -193,4 +197,23 @@ func createFile(filename string) (*os.File, error) {
     }
 
     return dst, nil
+}
+
+
+func prettyPrintSize(s int64) (ps string) {
+    const unit = 1024
+    if s < unit {
+        return fmt.Sprintf("%dB", s)
+    }
+
+    div, exp := float64(unit), 0
+    for n := float64(s) / unit; n >= unit; n /= unit {
+        div *= unit
+        exp++
+    }
+
+    return fmt.Sprintf("%.1f%cB",
+        float64(s)/div,
+        "KMGTPE"[exp],
+    )
 }
