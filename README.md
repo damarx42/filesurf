@@ -28,6 +28,20 @@ curl -X POST -k https://192.168.1.42/upload -F "content=@./myfile.txt"
 
 Use the `-k` flag for "insecure" mode to accept the self-generated cert.
 
+## Building
+
+A ready to use binary can be found under **Releases**.
+
+If you want to build it yourself, the easiest way is to use the Makefile.
+- `make` -> build for your current architecture only
+- `make all` -> build for all architectures
+- `make <linux/darwin/win>-<386/amd64/arm64>` -> build a specific version 
+
+Otherwise, to build for your current architecture, you can also just use
+```
+go build filesurf.go
+```
+
 ## What works
 - Directory listing
 - File download
