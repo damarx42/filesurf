@@ -19,6 +19,16 @@ import (
 )
 
 
+// ANSI coloring
+const (
+    cReset  = "\033[0m"
+    cBold   = "\033[1m"
+    cRed    = "\033[31m"
+    cYellow = "\033[33m"
+    cGreen  = "\033[32m"
+    cBlue   = "\033[34m"
+)
+
 const DEFAULT_CERTNAME string = "filesurf.pem"
 const DEFAULT_KEYNAME string = "filesurf.key"
 const BUFFER_SIZE int64 = 20 << 20 // 20 MB buffer size for file upload
@@ -52,14 +62,14 @@ func main() {
     // Give warning if baseDir is set to cwd
     ex, err := os.Executable()
     if *baseDir == "." || *baseDir == path.Dir(ex) {
-        log.Printf("WARNING: Base directory set to current working directory. This might expose your TLS keys.")
+        log.Printf("%sWARNING:%s Base directory set to current working directory. This might expose your TLS keys.", cYellow, cReset)
     }
 
     // Give warning if upDir is set to cwd or baseDir
     if *upDir == "." || *upDir == path.Dir(ex) {
-        log.Printf("WARNING: Upload directory set to current working directory. You might overwrite the binary or your TLS keys!")
+        log.Printf("%sWARNING:%s Upload directory set to current working directory. You might overwrite the binary or your TLS keys!", cYellow, cReset)
     } else if *upDir == *baseDir {
-        log.Printf("WARNING: Upload directory set to same as base directory. Be careful not to overwrite existing files!")
+        log.Printf("%sWARNING:%s Upload directory set to same as base directory. Be careful not to overwrite existing files!", cYellow, cReset)
     }
 
     // Validate base directory
@@ -83,7 +93,7 @@ func main() {
                     generateKeyAndCert()
             }
         } else if *certFile == "" || *keyFile == "" {
-            log.Fatal("HTTPS enabled but -cert or -key not provided")
+            log.Fatal("%sERROR: HTTPS enabled but -cert or -key not provided %s", cRed, cReset)
         }
     }
 
@@ -104,7 +114,7 @@ func main() {
 
         //if only one parameter set, error out
         if (*basicUser != "" && *basicPass == "") || (*basicUser == "" && *basicPass != "") {
-            log.Fatalf("Error: Both user and password must be supplied, or both ommitted to randomly generate.")
+            log.Fatalf("%sError: Both user and password must be supplied, or both ommitted to randomly generate. %s", cRed, cReset)
         } else if *basicUser != "" && *basicPass != "" {
             baUser = *basicUser
             baPass = *basicPass
@@ -123,10 +133,10 @@ func main() {
         // Call Basic Auth wrapper factory to register user and password
         auth := basicAuthMiddleware(baUser, baPass)
 
-        log.Printf("Generated Basic Authentication credentials: %s:%s", baUser, baPass)
+        log.Printf("Generated Basic Authentication credentials:%s %s:%s %s", cBold, baUser, baPass, cReset)
 
         if !*enableHTTPS {
-            log.Printf("WARNING: Using Basic Authentication but without HTTPS. Your credentials are transmitted in clear text.")
+            log.Printf("%sWARNING:%s Using Basic Authentication but without HTTPS. Your credentials are transmitted in clear text.", cYellow, cReset)
         }
 
         fileServer = auth(fileServer)
@@ -139,19 +149,19 @@ func main() {
     address := ":" + *port
 
     // Setup complete, give usage info an run server
-    log.Printf("Serving directory: %s", *baseDir)
+    log.Printf("Serving directory:%s %s %s", cBold, *baseDir, cReset)
     log.Printf("Use endpoint /upload for uploading. POST request with form field 'content' = your data")
 
     if *enableHTTPS {
-        log.Printf("HTTPS enabled on https://0.0.0.0%s/", address)
+        log.Printf("HTTPS enabled on %shttps://0.0.0.0%s/ %s", cBold, address, cReset)
         err = http.ListenAndServeTLS(address, *certFile, *keyFile, nil)
     } else {
-        log.Printf("HTTP enabled on http://0.0.0.0%s/", address)
+        log.Printf("HTTP enabled on %shttp://0.0.0.0%s/ %s", cBold, address, cReset)
         err = http.ListenAndServe(address, nil)
     }
 
     if err != nil {
-        log.Fatalf("Server failed: %v", err)
+        log.Fatalf("%sServer failed: %v %s", cRed, err, cReset)
     }
 
 }
@@ -287,20 +297,20 @@ func checkOrCreateDir (filePath string) {
     if err == nil {
         // Check if path is a directory
         if !info.IsDir() {
-            log.Fatalf("Error! '%s' exists, but is not a directory.", filePath)
+            log.Fatalf("%sERROR:%s '%s' exists, but is not a directory.", cRed, cReset, filePath)
         }
 
         // Check for rwx permissions
         mode := info.Mode().Perm()
         if mode&0700 != 0700 {
-            log.Fatalf("Error! Insufficient permissions on '%s'.", filePath)
+            log.Fatalf("%sERROR:%s Insufficient permissions on '%s'.", cRed, cReset, filePath)
         }
     }
 
     // If path doesn't exist yet, attempt creation
     if os.IsNotExist(err) {
         if err := os.MkdirAll(filePath, 0755); err != nil {
-            log.Fatalf("Failed to create directory '%s'", filePath)
+            log.Fatalf("%sERROR:%s Failed to create directory '%s'", cRed, cReset, filePath)
         } else if err == nil {
             log.Printf("Creating directory %s", filePath)
         }
