@@ -35,6 +35,8 @@ curl -X POST -k https://192.168.1.42/upload -F "content=@./myfile.txt"
 
 Use the `-k` flag for "insecure" mode to accept the self-generated cert.
 
+Alternatively, a minimalistic upload web UI is offered under `/upload-ui`
+
 ## Building
 
 A ready to use binary can be found under **Releases**.
@@ -56,11 +58,8 @@ go build filesurf.go
 - HTTPS
 - Self-generating HTTPS certificates
 - HTTP Basic Auth
+- Built-in upload web UI
 
 ## What is still missing
 - some pretty-printing of directory listing for downloads
     - however, this would prolly require some more in-depth work
-- perhaps a built-in upload frontend?
-    - I don't want to have a seperate html/js file
-    - basic idea was to serve all as a single binary
-    - might include it as some hard-coded web page content, idk
