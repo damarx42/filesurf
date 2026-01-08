@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Filesurf Upload UI</title>
+</head>
+<body>
+  <input type="file" id="fileInput" multiple />
+  <button id="uploadBtn">Upload</button>
+
+  <ul id="status"></ul>
+
+  <script>
+    document.getElementById('uploadBtn').addEventListener('click', async () => {
+      const files = document.getElementById('fileInput').files;
+      const statusList = document.getElementById('status');
+      statusList.innerHTML = '';
+
+      if (!files.length) return;
+
+      const uploads = Array.from(files).map(file => {
+        const li = document.createElement('li');
+        li.textContent = `Uploading ${file.name}...`;
+        statusList.appendChild(li);
+
+        const formData = new FormData();
+        formData.append('content', file);
+
+        return fetch('/upload', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Upload failed');
+          }
+          li.textContent = `Uploaded ${file.name} successfully`;
+        })
+        .catch(() => {
+          li.textContent = `Failed to upload ${file.name}`;
+        });
+      });
+
+      await Promise.all(uploads);
+    });
+  </script>
+</body>
+</html>

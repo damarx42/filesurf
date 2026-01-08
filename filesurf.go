@@ -18,6 +18,9 @@ import (
     "os"
 )
 
+import _ "embed"
+//go:embed upload-ui.html
+var uploaderHtml []byte
 
 // ANSI coloring
 const (
@@ -102,9 +105,11 @@ func main() {
 
     var fileServer http.Handler
     var uploadServer http.Handler
+    var uiServer http.Handler
 
     fileServer = http.FileServer(http.Dir(*baseDir))
     uploadServer = http.HandlerFunc(fileUploadHandler)
+    uiServer = http.HandlerFunc(uiUploadHandler)
 
     // Read / generate authentication if Basic Auth is enabled
     if *basicAuth {
@@ -141,16 +146,19 @@ func main() {
 
         fileServer = auth(fileServer)
         uploadServer = auth(uploadServer)
+        uiServer = auth(uiServer)
     }
 
     http.Handle("/", fileServer)
     http.Handle("/upload", uploadServer)
+    http.Handle("/upload-ui", uiServer)
 
     address := ":" + *port
 
     // Setup complete, give usage info an run server
     log.Printf("Serving directory:%s %s %s", cBold, *baseDir, cReset)
-    log.Printf("Use endpoint /upload for uploading. POST request with form field 'content' = your data")
+    log.Printf("Use API endpoint %s/upload%s for uploading. POST request with form field 'content' = your data", cBold, cReset)
+    log.Printf("Alternatively, use %s/upload-ui%s for simple browser UI", cBold, cReset)
 
     if *enableHTTPS {
         log.Printf("HTTPS enabled on %shttps://0.0.0.0%s/ %s", cBold, address, cReset)
@@ -255,6 +263,19 @@ func fileUploadHandler (w http.ResponseWriter, r *http.Request) {
     }    
 
     log.Printf("Received file: %s, Size: %s", handler.Filename, sstr)
+}
+
+
+func uiUploadHandler(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodGet {
+        http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    w.Header().Set("Content-Type", "text/html; charset=utf-8")
+    w.WriteHeader(http.StatusOK)
+    _, _ = w.Write(uploaderHtml)
+
 }
 
 
