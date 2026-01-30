@@ -1,26 +1,37 @@
-ALL_TARGETS := linux-amd64 \
-	linux-386 \
-	linux-arm64 \
-	darwin-amd64 \
-	darwin-arm64 \
-	windows-amd64 \
-	windows-386 \
-	windows-arm64
+UNIX_ENVS := linux-amd64 linux-386 linux-arm64 darwin-amd64 darwin-arm64
+WIN_ENVS  := windows-amd64 windows-386 windows-arm64
 
-# excluded darwin/386 - not supported
+OUTDIR = bin
+
+UNIX_TARGETS := $(UNIX_ENVS:%=filesurf-%)
+WIN_TARGETS  := $(WIN_ENVS:%=filesurf-%.exe)
+UNIX_TARGETS := $(UNIX_TARGETS:%=$(OUTDIR)/%)
+WIN_TARGETS  := $(WIN_TARGETS:%=$(OUTDIR)/%)
 
 LDFLAGS := -ldflags "-w -s"
 
-default : filesurf.go 
-	go build $(LDFLAGS) -o bin/filesurf $<
+TARGET_NAME := $(OUTDIR)/filesurf-$(shell go env GOOS)-$(shell go env GOARCH)
 
-$(ALL_TARGETS) : filesurf.go
-	GOOS=$(word 1,$(subst -, ,$@)) \
-	GOARCH=$(word 2,$(subst -, ,$@)) \
-	go build $(LDFLAGS) -o bin/filesurf-$@ $<
+ifeq ($(OS),Windows_NT)
+TARGET_NAME := $(TARGET_NAME).exe
+endif
 
-all : $(ALL_TARGETS)
+default : $(TARGET_NAME)
 
-.PHONY : clean
+$(UNIX_TARGETS) $(WIN_TARGETS) : TARGET_OS = $(word 2,$(subst -, ,$@))
+$(UNIX_TARGETS) $(WIN_TARGETS) : TARGET_ARCH = $(word 3,$(subst -, ,$(@:%.exe=%)))
+
+$(UNIX_TARGETS) $(WIN_TARGETS) : filesurf.go
+	GOOS=$(TARGET_OS) GOARCH=$(TARGET_ARCH) go build $(LDFLAGS) -o $@ $<
+
+all : $(UNIX_TARGETS) $(WIN_TARGETS)
+
+.PHONY : clean cleaner run
 clean :
-	-rm -f bin/filesurf*
+	-rm -f bin/filesurf-*
+
+cleaner : clean
+	go clean --cache
+
+run : $(TARGET_NAME)
+	./$<
